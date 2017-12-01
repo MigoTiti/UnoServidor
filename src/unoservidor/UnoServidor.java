@@ -4,9 +4,9 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
-import javafx.event.ActionEvent;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
+import javafx.scene.control.TextArea;
 import javafx.scene.layout.StackPane;
 import javax.swing.JApplet;
 import javax.swing.JFrame;
@@ -16,9 +16,11 @@ import javax.swing.UnsupportedLookAndFeelException;
 
 public class UnoServidor extends JApplet {
     
-    private static final int JFXPANEL_WIDTH_INT = 300;
-    private static final int JFXPANEL_HEIGHT_INT = 250;
+    private static final int JFXPANEL_WIDTH_INT = 500;
+    private static final int JFXPANEL_HEIGHT_INT = 500;
     private static JFXPanel fxContainer;
+    
+    private static TextArea logger;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -27,7 +29,7 @@ public class UnoServidor extends JApplet {
             } catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException e) {
             }
             
-            JFrame frame = new JFrame("JavaFX 2 in Swing");
+            JFrame frame = new JFrame("Uno - Servidor");
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             
             JApplet applet = new UnoServidor();
@@ -48,20 +50,29 @@ public class UnoServidor extends JApplet {
         fxContainer = new JFXPanel();
         fxContainer.setPreferredSize(new Dimension(JFXPANEL_WIDTH_INT, JFXPANEL_HEIGHT_INT));
         add(fxContainer, BorderLayout.CENTER);
+        iniciarServidor();
         Platform.runLater(() -> {
             createScene();
         });
     }
     
     private void createScene() {
-        Button btn = new Button();
-        btn.setText("Say 'Hello World'");
-        btn.setOnAction((ActionEvent event) -> {
-            System.out.println("Hello World!");
-        });
+        logger = new TextArea();
+        logger.setEditable(false);
+        
         StackPane root = new StackPane();
-        root.getChildren().add(btn);
-        fxContainer.setScene(new Scene(root));
+        root.setPadding(new Insets(30));
+        root.getChildren().add(logger);
+        fxContainer.setScene(new Scene(root));   
     }
     
+    private static void appendMensagem(String mensagem) {
+        Platform.runLater(() -> {
+            logger.appendText(mensagem + "\n");
+        });
+    }
+    
+    private static void iniciarServidor() {
+        
+    }
 }
