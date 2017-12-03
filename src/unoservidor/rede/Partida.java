@@ -1,13 +1,18 @@
 package unoservidor.rede;
 
-import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
+import javafx.util.Pair;
 import unoservidor.estruturas.Baralho;
+import unoservidor.estruturas.Carta;
 
 public class Partida {
 
     public static int idIncremental = 0;
 
-    private DatagramSocket[] jogadores;
+    private Comunicador comunicadorServidor;
+    private final List<Pair<InetAddress, Integer>> jogadores;
     private Baralho baralho;
 
     private int nJogadores;
@@ -16,17 +21,23 @@ public class Partida {
     private String nome;
     private int jogadorDaVez = 1;
 
-    public Partida(DatagramSocket primeiroJogador, int nJogadores, String nome) {
+    public Partida(Pair<InetAddress, Integer> primeiroJogador, Comunicador comunicadorServidor, int nJogadores, String nome) {
         this.nJogadores = nJogadores;
         this.id = idIncremental++;
         this.nome = nome;
-        this.jogadores = new DatagramSocket[nJogadores];
-        this.jogadores[jogadoresConectados++] = primeiroJogador;
-        this.baralho = new Baralho();
+        this.jogadores = new ArrayList<>();
+        this.jogadores.add(primeiroJogador);
+        this.jogadoresConectados++;
+        this.comunicadorServidor = comunicadorServidor;
+        this.baralho = null;
     }
 
-    private void iniciarPartida() {
-
+    public void iniciarPartida() {
+        multicast(Integer.toString(Comunicador.TODOS_JOGADORES_CONECTADOS));
+        
+        distribuirCartas();
+        
+        
     }
 
     private void incrementarVezDoJogador(int valor, boolean sentidoHorario) {
@@ -48,23 +59,38 @@ public class Partida {
     }
 
     private void multicast(String mensagem) {
-
+        jogadores.stream().forEach((jogador) -> {
+            comunicadorServidor.enviarMensagemParaJogador(mensagem, jogador.getKey(), jogador.getValue());
+        });
     }
 
     private void distribuirCartas() {
-
+        baralho = new Baralho();
+        baralho.jogarCarta(baralho.getCartaNoTopo());
+        
+        Carta primeiraCarta = baralho.getCartaNaMesa();
+        
+        for (int i = 0; i < jogadoresConectados; i++) {
+            StringBuilder mensagem = new StringBuilder(Integer.toString(Comunicador.DISTRIBUIR_CARTAS));
+            mensagem.append("&").append(nJogadores)
+                    .append("&").append(i + 1)
+                    .append("&").append(primeiraCarta.toString());
+            
+            for (int j = 0; j < 7; j++) {
+                Carta c = baralho.getCartaNoTopo();
+                mensagem.append("&").append(c.toString());
+            }
+            
+            String mensagemPronta = mensagem.toString();
+            Pair<InetAddress, Integer> endereco = jogadores.get(i);
+            
+            comunicadorServidor.enviarMensagemParaJogador(mensagemPronta, endereco.getKey(), endereco.getValue());
+        }
     }
 
-    public void adicionarJogador(DatagramSocket jogador) {
-        this.jogadores[jogadoresConectados++] = jogador;
-    }
-
-    public DatagramSocket[] getJogadores() {
-        return jogadores;
-    }
-
-    public void setJogadores(DatagramSocket[] jogadores) {
-        this.jogadores = jogadores;
+    public void adicionarJogador(InetAddress ip, int porta) {
+        this.jogadores.add(new Pair<>(ip, porta));
+        this.jogadoresConectados++;
     }
 
     public int getnJogadores() {
@@ -113,5 +139,13 @@ public class Partida {
 
     public void setBaralho(Baralho baralho) {
         this.baralho = baralho;
+    }
+
+    public Comunicador getComunicadorServidor() {
+        return comunicadorServidor;
+    }
+
+    public void setComunicadorServidor(Comunicador comunicadorServidor) {
+        this.comunicadorServidor = comunicadorServidor;
     }
 }
