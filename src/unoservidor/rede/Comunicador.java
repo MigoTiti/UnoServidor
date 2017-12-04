@@ -20,6 +20,9 @@ public class Comunicador {
     public static final int DISTRIBUIR_CARTAS = 10;
     public static final int JOGAR_CARTA = 11;
     public static final int COMPRAR_CARTA = 12;
+    public static final int PULAR_JOGADA = 13;
+    public static final int RESPOSTA_COMPRA = 14;
+    public static final int REPORTAR_JOGADA = 15;
     
     private DatagramSocket socket;
 
