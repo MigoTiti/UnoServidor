@@ -5,9 +5,9 @@ import java.awt.Dimension;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketException;
 import java.util.HashMap;
 import java.util.StringTokenizer;
@@ -21,12 +21,12 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
-import javafx.util.Pair;
 import javax.swing.JApplet;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
+import unoservidor.rede.Comunicador;
 import unoservidor.rede.Comunicador;
 import unoservidor.rede.Partida;
 
@@ -40,7 +40,7 @@ public class UnoServidor extends JApplet {
 
     public static final int PORTA = 12345;
     public static final HashMap<Integer, Partida> PARTIDAS = new HashMap<>();
-    private static DatagramSocket socket;
+    private static ServerSocket socketServidor;
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
@@ -95,15 +95,15 @@ public class UnoServidor extends JApplet {
 
     private static void iniciarServidor() {
         try {
-            socket = new DatagramSocket(PORTA);
+            socketServidor = new ServerSocket(PORTA);
 
             appendMensagem("Servidor iniciado");
 
             while (true) {
-                byte[] mensagemAReceber = new byte[500];
-                DatagramPacket pacoteAReceber = new DatagramPacket(mensagemAReceber, mensagemAReceber.length);
-                socket.receive(pacoteAReceber);
-                String mensagemRecebida = new String(pacoteAReceber.getData());
+                Socket cliente = socketServidor.accept();
+                Comunicador comunicador = new Comunicador(cliente);
+                
+                String mensagemRecebida = comunicador.receberMensagem();
 
                 StringTokenizer st = new StringTokenizer(mensagemRecebida, "&");
                 int comando = Integer.parseInt(st.nextToken());
@@ -111,7 +111,7 @@ public class UnoServidor extends JApplet {
                 if (comando == Comunicador.SOLICITAR_CONEXAO) {
                     new Thread(() -> {
                         try {
-                            handleConexao(pacoteAReceber);
+                            handleConexao(comunicador);
                         } catch (SocketException ex) {
                             exibirException(ex);
                         }
@@ -125,18 +125,13 @@ public class UnoServidor extends JApplet {
         }
     }
 
-    private static void handleConexao(DatagramPacket pacote) throws SocketException {
-        Comunicador comunicador = new Comunicador(new DatagramSocket());
+    private static void handleConexao(Comunicador pacote) throws SocketException {
+        appendMensagem("Usuario conectado, IP: " + pacote.getSocket().getInetAddress() + ", porta: " + pacote.getSocket().getPort());
 
-        appendMensagem("Usuario conectado, IP: " + pacote.getAddress().getHostAddress() + ", porta: " + pacote.getPort());
-
-        InetAddress ip = pacote.getAddress();
-        int porta = pacote.getPort();
-
-        comunicador.enviarMensagemParaJogador(Integer.toString(Comunicador.CONFIRMAR_CONEXAO), ip, porta);
-
+        pacote.enviarMensagemParaJogador(Integer.toString(Comunicador.CONFIRMAR_CONEXAO));
+        
         while (true) {
-            String mensagem = comunicador.receberMensagem();
+            String mensagem = pacote.receberMensagem();
             StringTokenizer st = new StringTokenizer(mensagem, "&");
 
             int comando = Integer.parseInt(st.nextToken());
@@ -146,12 +141,12 @@ public class UnoServidor extends JApplet {
                     String nome = st.nextToken();
                     int nJogadores = Integer.parseInt(st.nextToken());
 
-                    Partida p = new Partida(new Pair<>(ip, porta), comunicador, nJogadores, nome);
+                    Partida p = new Partida(pacote, nJogadores, nome);
 
                     PARTIDAS.put(p.getId(), p);
                     appendMensagem("Partida '" + nome + "' criada, capacidade: " + nJogadores + " jogadores");
 
-                    comunicador.enviarMensagemParaJogador(Integer.toString(Comunicador.CONFIRMAR_CRIACAO_PARTIDA), ip, porta);
+                    pacote.enviarMensagemParaJogador(Integer.toString(Comunicador.CONFIRMAR_CRIACAO_PARTIDA));
                     return;
                 case Comunicador.LISTAR_PARTIDAS:
                     StringBuilder listagem = new StringBuilder(Comunicador.LISTAR_PARTIDAS + "&");
@@ -165,7 +160,7 @@ public class UnoServidor extends JApplet {
 
                     listagem.deleteCharAt(listagem.length() - 1);
 
-                    comunicador.enviarMensagemParaJogador(listagem.toString(), ip, porta);
+                    pacote.enviarMensagemParaJogador(listagem.toString());
                     break;
                 case Comunicador.ENTRAR_EM_PARTIDA:
                     int id = Integer.parseInt(st.nextToken());
@@ -173,16 +168,16 @@ public class UnoServidor extends JApplet {
                     Partida partidaAEntrar = PARTIDAS.get(id);
 
                     if (partidaAEntrar.getJogadoresConectados() != partidaAEntrar.getnJogadores()) {
-                        partidaAEntrar.adicionarJogador(ip, porta);
+                        partidaAEntrar.adicionarJogador(pacote);
 
-                        comunicador.enviarMensagemParaJogador(Integer.toString(Comunicador.CONFIRMAR_ENTRADA_EM_PARTIDA), ip, porta);
+                        pacote.enviarMensagemParaJogador(Integer.toString(Comunicador.CONFIRMAR_ENTRADA_EM_PARTIDA));
                         
                         if (partidaAEntrar.getJogadoresConectados() == partidaAEntrar.getnJogadores())
                             new Thread(() -> partidaAEntrar.iniciarPartida()).start();
                         
                         return;
                     } else {
-                        comunicador.enviarMensagemParaJogador(Integer.toString(Comunicador.PARTIDA_CHEIA), ip, porta);
+                        pacote.enviarMensagemParaJogador(Integer.toString(Comunicador.PARTIDA_CHEIA));
                     }
                     break;
                 default:

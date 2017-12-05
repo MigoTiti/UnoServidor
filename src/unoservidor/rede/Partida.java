@@ -1,10 +1,8 @@
 package unoservidor.rede;
 
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.StringTokenizer;
-import javafx.util.Pair;
 import unoservidor.estruturas.Baralho;
 import unoservidor.estruturas.Carta;
 import unoservidor.util.Utilitarios;
@@ -13,8 +11,7 @@ public class Partida {
 
     public static int idIncremental = 0;
 
-    private Comunicador comunicadorServidor;
-    private final List<Pair<InetAddress, Integer>> jogadores;
+    private final Map<Integer, Comunicador> jogadores;
     private Baralho baralho;
 
     private int nJogadores;
@@ -23,14 +20,12 @@ public class Partida {
     private String nome;
     private int jogadorDaVez = 1;
 
-    public Partida(Pair<InetAddress, Integer> primeiroJogador, Comunicador comunicadorServidor, int nJogadores, String nome) {
+    public Partida(Comunicador primeiroJogador, int nJogadores, String nome) {
         this.nJogadores = nJogadores;
         this.id = idIncremental++;
         this.nome = nome;
-        this.jogadores = new ArrayList<>();
-        this.jogadores.add(primeiroJogador);
-        this.jogadoresConectados++;
-        this.comunicadorServidor = comunicadorServidor;
+        this.jogadores = new HashMap<>();
+        this.jogadores.put(++this.jogadoresConectados, primeiroJogador);
         this.baralho = null;
     }
 
@@ -44,7 +39,7 @@ public class Partida {
 	int contagemCorrente = 0;
         
         while (true) {
-            String jogada = comunicadorServidor.receberMensagem();
+            String jogada = jogadores.get(jogadorDaVez).receberMensagem();
             
             StringTokenizer st = new StringTokenizer(jogada, "&");
             
@@ -149,8 +144,8 @@ public class Partida {
     }
 
     private void multicast(String mensagem) {
-        jogadores.stream().forEach((jogador) -> {
-            comunicadorServidor.enviarMensagemParaJogador(mensagem, jogador.getKey(), jogador.getValue());
+        jogadores.entrySet().stream().forEach((jogador) -> {
+            jogador.getValue().enviarMensagemParaJogador(mensagem);
         });
     }
 
@@ -160,10 +155,10 @@ public class Partida {
         
         Carta primeiraCarta = baralho.getCartaNaMesa();
         
-        for (int i = 0; i < jogadoresConectados; i++) {
+        for (int i = 1; i <= jogadoresConectados; i++) {
             StringBuilder mensagem = new StringBuilder(Integer.toString(Comunicador.DISTRIBUIR_CARTAS));
             mensagem.append("&").append(nJogadores)
-                    .append("&").append(i + 1)
+                    .append("&").append(i)
                     .append("&").append(primeiraCarta.toString());
             
             for (int j = 0; j < 7; j++) {
@@ -171,16 +166,13 @@ public class Partida {
                 mensagem.append("&").append(c.toString());
             }
             
-            String mensagemPronta = mensagem.toString();
-            Pair<InetAddress, Integer> endereco = jogadores.get(i);
-            
-            comunicadorServidor.enviarMensagemParaJogador(mensagemPronta, endereco.getKey(), endereco.getValue());
+            String mensagemPronta = mensagem.toString();  
+            jogadores.get(i).enviarMensagemParaJogador(mensagemPronta);
         }
     }
 
-    public void adicionarJogador(InetAddress ip, int porta) {
-        this.jogadores.add(new Pair<>(ip, porta));
-        this.jogadoresConectados++;
+    public void adicionarJogador(Comunicador jogador) {
+        this.jogadores.put(++this.jogadoresConectados,jogador);
     }
 
     public int getnJogadores() {
@@ -229,13 +221,5 @@ public class Partida {
 
     public void setBaralho(Baralho baralho) {
         this.baralho = baralho;
-    }
-
-    public Comunicador getComunicadorServidor() {
-        return comunicadorServidor;
-    }
-
-    public void setComunicadorServidor(Comunicador comunicadorServidor) {
-        this.comunicadorServidor = comunicadorServidor;
     }
 }

@@ -20,7 +20,7 @@ public class Baralho {
     public Baralho() {
         this.cartas = new ArrayList<>();
 
-        int modo = MODO_MAIS_DOIS;
+        int modo = MODO_CORINGA;
 
         switch (modo) {
             case 1:

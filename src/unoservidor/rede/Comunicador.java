@@ -1,13 +1,15 @@
 package unoservidor.rede;
 
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import javafx.application.Platform;
 import unoservidor.UnoServidor;
 
 public class Comunicador {
-    
+
     public static final int SOLICITAR_CONEXAO = 1;
     public static final int CONFIRMAR_CONEXAO = 2;
     public static final int CRIAR_PARTIDA = 3;
@@ -23,34 +25,34 @@ public class Comunicador {
     public static final int PULAR_JOGADA = 13;
     public static final int RESPOSTA_COMPRA = 14;
     public static final int REPORTAR_JOGADA = 15;
-    
-    private DatagramSocket socket;
 
-    public Comunicador(DatagramSocket socket) {
-        this.socket = socket;
-    }    
-        
-    public void enviarMensagemParaJogador(String mensagemString, InetAddress endereco, int porta) {
+    private Socket socket;
+    private BufferedReader inputStream;
+    private PrintWriter writer;
+
+    public Comunicador(Socket socket) {
         try {
-            mensagemString = mensagemString + "&";
-            byte[] mensagem = mensagemString.getBytes();
-            DatagramPacket pacoteAEnviar = new DatagramPacket(mensagem, mensagem.length, endereco, porta);
-            socket.send(pacoteAEnviar);
+            this.socket = socket;
+            this.inputStream = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            this.writer = new PrintWriter(socket.getOutputStream(), true);
+        } catch (IOException ex) {
+            UnoServidor.exibirException(ex);
+        }
+    }
+
+    public void enviarMensagemParaJogador(String mensagemString) {
+        try {
+            writer.println(mensagemString + "&");
         } catch (Exception ex) {
             Platform.runLater(() -> {
                 UnoServidor.exibirException(ex);
             });
         }
     }
-    
+
     public String receberMensagem() {
         try {
-            byte[] buffer = new byte[500];
-            DatagramPacket pacoteResposta = new DatagramPacket(buffer, buffer.length);
-            socket.receive(pacoteResposta);
-            String respostaString = new String(pacoteResposta.getData());
-
-            return respostaString;
+            return inputStream.readLine();
         } catch (Exception ex) {
             Platform.runLater(() -> {
                 UnoServidor.exibirException(ex);
@@ -59,12 +61,12 @@ public class Comunicador {
 
         return null;
     }
-    
-    public DatagramSocket getSocket() {
+
+    public Socket getSocket() {
         return socket;
     }
 
-    public void setSocket(DatagramSocket socket) {
+    public void setSocket(Socket socket) {
         this.socket = socket;
     }
 }
