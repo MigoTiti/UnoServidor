@@ -72,7 +72,6 @@ public class UnoServidor extends JApplet {
         add(fxContainer, BorderLayout.CENTER);
         Platform.runLater(() -> {
             createScene();
-            appendMensagem("Servidor sendo inicializado...");
         });
         new Thread(() -> iniciarServidor()).start();
     }
