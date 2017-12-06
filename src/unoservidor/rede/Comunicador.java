@@ -53,7 +53,7 @@ public class Comunicador {
     public String receberMensagem() {
         try {
             return inputStream.readLine();
-        } catch (Exception ex) {
+        } catch (IOException ex) {
             Platform.runLater(() -> {
                 UnoServidor.exibirException(ex);
             });

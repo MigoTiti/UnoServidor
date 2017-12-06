@@ -5,7 +5,6 @@ import java.awt.Dimension;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -26,7 +25,6 @@ import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
-import unoservidor.rede.Comunicador;
 import unoservidor.rede.Comunicador;
 import unoservidor.rede.Partida;
 
