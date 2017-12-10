@@ -25,6 +25,9 @@ public class Comunicador {
     public static final int PULAR_JOGADA = 13;
     public static final int RESPOSTA_COMPRA = 14;
     public static final int REPORTAR_JOGADA = 15;
+    public static final int JOGADOR_EM_UNO = 16;
+    public static final int JOGADOR_SAIU_UNO = 17;
+    public static final int JOGADOR_VENCEU = 18;
 
     private Socket socket;
     private BufferedReader inputStream;
